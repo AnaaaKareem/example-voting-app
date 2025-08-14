@@ -7,21 +7,18 @@ on:
       - 'main'
     paths:
       - 'result/**'
-      - '.github/workflows/call-docker-build-result.yaml'
       - 'vote/**'
-      - '.github/workflows/call-docker-build-vote.yaml'
       - 'worker/**'
-      - '.github/workflows/call-docker-build-worker.yaml'
+      - '.github/workflows/master-workflow.yaml'
+
   pull_request:
     branches:
       - 'main'
     paths:
       - 'result/**'
-      - '.github/workflows/call-docker-build-result.yaml'
       - 'vote/**'
-      - '.github/workflows/call-docker-build-vote.yaml'
       - 'worker/**'
-      - '.github/workflows/call-docker-build-worker.yaml'
+      - '.github/workflows/master-workflow.yaml'
 
 jobs:
 
