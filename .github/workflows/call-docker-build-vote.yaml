@@ -26,7 +26,7 @@ jobs:
     
     defaults:
      run:
-       working-directory: voting
+       working-directory: vote
 
     strategy:
       matrix:
@@ -71,8 +71,8 @@ jobs:
         id: build-image
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY: votingapp/results
-          IMAGE_TAG: Voting:latest
+          REPOSITORY: votingapp/vote
+          IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
