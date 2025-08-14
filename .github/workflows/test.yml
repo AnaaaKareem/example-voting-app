@@ -1,0 +1,177 @@
+name: Build Images
+
+on:
+  # we want pull requests so we can build(test) but not push to image registry
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'result/**'
+      - '.github/workflows/call-docker-build-result.yaml'
+      - 'vote/**'
+      - '.github/workflows/call-docker-build-vote.yaml'
+      - 'worker/**'
+      - '.github/workflows/call-docker-build-worker.yaml'
+  pull_request:
+    branches:
+      - 'main'
+    paths:
+      - 'result/**'
+      - '.github/workflows/call-docker-build-result.yaml'
+      - 'vote/**'
+      - '.github/workflows/call-docker-build-vote.yaml'
+      - 'worker/**'
+      - '.github/workflows/call-docker-build-worker.yaml'
+
+jobs:
+
+  Result-Test:
+    
+    runs-on: ubuntu-latest
+    
+    defaults:
+     run:
+      working-directory: result
+       
+    
+    # Setup multiple node versions to test
+    strategy:
+      matrix:
+        node: [14, 16, 18, 20]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Use node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      
+      # Install npm dependencies before build
+      - name: Check Dependencies
+        run:  | 
+          npm ci && \
+          npm cache clean --force
+      - name: Remove Dependencies to build image
+        run: rm -rf node_modules
+  
+  ResultsBuildAndPublish:
+
+    runs-on: ubuntu-latest
+    
+    defaults:
+     run:
+      working-directory: result
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.region }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push docker image to Amazon ECR
+        id: build-image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: votingapp/results
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+
+  VoteTest:
+
+    runs-on: ubuntu-latest
+    
+    defaults:
+     run:
+       working-directory: vote
+
+    strategy:
+      matrix:
+        python: ['3.13', '3.12', '3.11']
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      # Check Library Compatibility
+      - name: Check libraries compatibility
+        run: pip install -r requirements.txt
+      - name: Uninstall Libraries
+        run: pip uninstall -y -r requirements.txt
+  
+  VoteBuildAndPublish:
+
+    runs-on: ubuntu-latest
+    
+    defaults:
+     run:
+       working-directory: vote
+  
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.region }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push docker image to Amazon ECR
+        id: build-image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: votingapp/vote
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+
+  WorkerBuildAndPublish:
+
+    runs-on: ubuntu-latest
+    
+    defaults:
+     run:
+       working-directory: worker
+  
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.region }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push docker image to Amazon ECR
+        id: build-image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: votingapp/worker
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
