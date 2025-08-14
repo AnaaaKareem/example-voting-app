@@ -22,7 +22,7 @@ on:
 jobs:
   
   # Test and Build node.js image
-  Test-Node:
+  Build:
 
     runs-on: ubuntu-latest
     defaults:
@@ -45,7 +45,6 @@ jobs:
       # Install npm dependencies before build
       - run: npm ci
       
-  registry_login:
     # runs-on: ubuntu-latest
     # steps:
     #   - name: Login to ECR
@@ -54,11 +53,6 @@ jobs:
     #       registry: ${{ vars.aws-account-number }}.dkr.ecr.${{ vars.region }}.amazonaws.com
     #       username: ${{ vars.AWS_ACCESS_KEY_ID }}
     #       password: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
-    runs-on: ubuntu-latest
-    steps:
-
-      - uses: actions/checkout@v5
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
