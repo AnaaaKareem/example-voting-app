@@ -43,6 +43,4 @@ jobs:
           node-version: ${{ matrix.node }}
       
       # Install npm dependencies before build
-      - run: npm install
       - run: npm ci
-      - run: npm test
