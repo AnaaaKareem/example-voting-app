@@ -25,9 +25,9 @@ jobs:
   Build:
 
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: result
+    #defaults:
+    #  run:
+    #    working-directory: result
     
     # Setup multiple node versions to test
     strategy:
@@ -41,7 +41,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-          #cache: 'npm'
+          cache: 'npm'
+          cache-dependency-path: result/package-lock.json
       
       # Install npm dependencies before build
       - run: npm install
