@@ -56,9 +56,9 @@ jobs:
     #       password: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
     runs-on: ubuntu-latest
-    run:
-      defaults:
-        working-directory: result
+    defaults:
+     run:
+       working-directory: result
 
     steps:
       - uses: actions/checkout@v5
