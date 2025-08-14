@@ -87,7 +87,7 @@ jobs:
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
-    VoteTest:
+  VoteTest:
 
     runs-on: ubuntu-latest
     
@@ -144,7 +144,7 @@ jobs:
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
-    WorkerBuildAndPublish:
+  WorkerBuildAndPublish:
 
     runs-on: ubuntu-latest
     
