@@ -31,7 +31,7 @@ jobs:
     
     defaults:
      run:
-       working-directory: result
+      working-directory: result
        
     
     # Setup multiple node versions to test
@@ -61,7 +61,7 @@ jobs:
     
     defaults:
      run:
-       working-directory: result
+      working-directory: result
 
     steps:
       - uses: actions/checkout@v5
