@@ -22,7 +22,7 @@ on:
 jobs:
   
   # Test and Build node.js image
-  Test-Node:
+  Test:
 
     runs-on: ubuntu-latest
     defaults:
@@ -37,23 +37,21 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: node.js
+      - name: Use node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
       
       # Install npm dependencies before build
-      - run: npm ci
+      - name: Check Dependencies
+      - run:  | 
+          ci && \
+          npm cache clean --force \
+      - name: Remove Dependencies to build image
+        run: rm -rf node_modules
+
       
-  registry_login:
-    # runs-on: ubuntu-latest
-    # steps:
-    #   - name: Login to ECR
-    #     uses: docker/login-action@v3
-    #     with:
-    #       registry: ${{ vars.aws-account-number }}.dkr.ecr.${{ vars.region }}.amazonaws.com
-    #       username: ${{ vars.AWS_ACCESS_KEY_ID }}
-    #       password: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  BuildAndPublish:
 
     runs-on: ubuntu-latest
     defaults:
