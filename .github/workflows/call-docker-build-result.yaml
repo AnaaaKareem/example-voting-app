@@ -44,9 +44,9 @@ jobs:
       
       # Install npm dependencies before build
       - name: Check Dependencies
-      - run:  | 
+        run:  | 
           ci && \
-          npm cache clean --force \
+          npm cache clean --force
       - name: Remove Dependencies to build image
         run: rm -rf node_modules
 
