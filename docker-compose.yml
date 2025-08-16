@@ -18,8 +18,10 @@ services:
       start_period: 10s
     volumes:
      - ./vote:/usr/local/app
-    ports:
-      - "8080:80"
+    # ports:
+    #   - "8080:80"
+    expose:
+      - "8080"
     networks:
       - front-tier
       - back-tier
@@ -34,8 +36,10 @@ services:
     volumes:
       - ./result:/usr/local/app
     ports:
-      - "8081:80"
+      # - "8081:80"
       - "127.0.0.1:9229:9229"
+    expose:
+      - "8081"
     networks:
       - front-tier
       - back-tier
@@ -87,15 +91,15 @@ services:
     networks:
       - front-tier
     restart: "no"
-
+  
   nginx:
-    image: nginx
+    image: nginx:alpine
     container_name: nginx
     ports:
       - "8080:8080"
       - "8081:8081"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf
     depends_on:
       - vote
       - result
