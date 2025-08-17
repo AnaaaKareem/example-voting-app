@@ -83,9 +83,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ ResultTest, VoteTest ]
     outputs:
-      vote_name: ${{ steps.vote_name.output.VOTE_REPO }}
-      result_name: ${{ steps.result_name.output.RESULT_REPO }}
-      worker_name: ${{ steps.worker_name.output.WORKER_REPO }}
+      vote_name: ${{ steps.vote_name.output.vote_name }}
+      result_name: ${{ steps.result_name.output.result_name }}
+      worker_name: ${{ steps.worker_name.output.worker_name }}
     env:
       TF_VAR_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
       TF_VAR_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -120,15 +120,15 @@ jobs:
 
       - name: Terraform Vote Name
         id: vote_name
-        run: echo "VOTE_REPO=$(terraform output -raw vote_name)" >> $GITHUB_OUTPUT
+        run: echo "vote_name=$(terraform output -raw vote_name)" >> $GITHUB_OUTPUT
 
       - name: Terraform Result Name
         id: result_name
-        run: echo "RESULT_REPO=$(terraform output -raw result_name)" >> $GITHUB_OUTPUT
+        run: echo "result_name=$(terraform output -raw result_name)" >> $GITHUB_OUTPUT
 
       - name: Terraform Worker Name
         id: worker_name
-        run: echo "WORKER_REPO=$(terraform output -raw worker_name)" >> $GITHUB_OUTPUT
+        run: echo "worker_name=$(terraform output -raw worker_name)" >> $GITHUB_OUTPUT
 
   ResultsBuildAndPublish:
 
