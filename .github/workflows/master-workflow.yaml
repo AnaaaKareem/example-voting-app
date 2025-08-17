@@ -97,14 +97,6 @@ jobs:
         with:
           terraform_version: "1.1.7"
 
-      - name: Terraform fmt
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        id: fmt
-        run: terraform fmt -check
-        continue-on-error: true
-
       - name: Terraform Init
         id: init
         run: terraform init -backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" -backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" -input=false
@@ -124,15 +116,15 @@ jobs:
 
       - name: Terraform Vote URL
         id: vote_url
-        run: echo "VOTE_REPO=$(terraform output -raw vote_url") >> $GITHUB_ENV
+        run: echo "VOTE_REPO=$(terraform output -raw vote_url)" >> $GITHUB_ENV
 
       - name: Terraform Result URL
         id: result_url
-        run: echo "RESULT_REPO=$(terraform output -raw result_url") >> $GITHUB_ENV
+        run: echo "RESULT_REPO=$(terraform output -raw result_url) >> $GITHUB_ENV
 
       - name: Terraform Worker URL
         id: worker_url
-        run: echo "WORKER_REPO=$(terraform output -raw worker_url") >> $GITHUB_ENV
+        run: echo "WORKER_REPO=$(terraform output -raw worker_url)" >> $GITHUB_ENV
 
   ResultsBuildAndPublish:
 
