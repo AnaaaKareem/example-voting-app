@@ -120,15 +120,15 @@ jobs:
 
       - name: Terraform Vote Name
         id: vote_name
-        run: echo "VOTE_REPO=$(terraform output -raw vote_name)" >> "$GITHUB_OUTPUT"
+        run: echo "VOTE_REPO=$(terraform output -raw vote_name)" >> $GITHUB_ENV
 
       - name: Terraform Result Name
         id: result_name
-        run: echo "RESULT_REPO=$(terraform output -raw result_name)" >> "$GITHUB_OUTPUT"
+        run: echo "RESULT_REPO=$(terraform output -raw result_name)" >> $GITHUB_ENV
 
       - name: Terraform Worker Name
         id: worker_name
-        run: echo "WORKER_REPO=$(terraform output -raw worker_name)" >> "$GITHUB_OUTPUT"
+        run: echo "WORKER_REPO=$(terraform output -raw worker_name)" >> $GITHUB_ENV
 
   ResultsBuildAndPublish:
 
@@ -157,7 +157,7 @@ jobs:
         id: build-image
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY: ${{ needs.ContainerRegistry.outputs.result_name }}
+          REPOSITORY: $RESULT_REPO
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
@@ -190,7 +190,7 @@ jobs:
         id: build-image
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY: ${{ needs.ContainerRegistry.outputs.vote_name }}
+          REPOSITORY: $VOTE_REPO
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
@@ -223,7 +223,7 @@ jobs:
         id: build-image
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY: ${{ needs.ContainerRegistry.outputs.worker_name }}
+          REPOSITORY: $WORKER_REPO
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
