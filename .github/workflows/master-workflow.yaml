@@ -78,10 +78,14 @@ jobs:
         run: pip uninstall -y -r requirements.txt
   
   
-  ConatinerRegistry:
+  ContainerRegistry:
     
     runs-on: ubuntu-latest
     needs: [ ResultTest, VoteTest ]
+    outputs:
+      vote_name: ${{ steps.vote_name.output.VOTE_REPO }}
+      result_name: ${{ steps.vote_name.output.RESULT_REPO }}
+      worker_name: ${{ steps.vote_name.output.WORKER_REPO }}
     env:
       TF_VAR_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
       TF_VAR_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -114,17 +118,17 @@ jobs:
         id: Apply
         run: terraform apply -auto-approve -no-color
 
-      - name: Terraform Vote URL
+      - name: Terraform Vote Name
         id: vote_name
-        run: echo "VOTE_REPO=$(terraform output -raw vote_name)" >> $GITHUB_ENV
+        run: echo "VOTE_REPO=$(terraform output -raw vote_name)" >> $GITHUB_OUTPUT
 
-      - name: Terraform Result URL
+      - name: Terraform Result Name
         id: result_name
-        run: echo "RESULT_REPO=$(terraform output -raw result_name)" >> $GITHUB_ENV
+        run: echo "RESULT_REPO=$(terraform output -raw result_name)" >> $GITHUB_OUTPUT
 
-      - name: Terraform Worker URL
+      - name: Terraform Worker Name
         id: worker_name
-        run: echo "WORKER_REPO=$(terraform output -raw worker_name)" >> $GITHUB_ENV
+        run: echo "WORKER_REPO=$(terraform output -raw worker_name)" >> $GITHUB_OUTPUT
 
   ResultsBuildAndPublish:
 
@@ -153,7 +157,7 @@ jobs:
         id: build-image
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY: ${{ env.RESULT_REPO }}
+          REPOSITORY: ${{ needs.ContainerRegistry.outputs.result_name }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
@@ -186,7 +190,7 @@ jobs:
         id: build-image
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY: ${{ env.VOTE_REPO }}
+          REPOSITORY: ${{ needs.ContainerRegistry.outputs.vote_name }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
@@ -219,7 +223,7 @@ jobs:
         id: build-image
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY: ${{ env.WORKER_REPO }}
+          REPOSITORY: ${{ needs.ContainerRegistry.outputs.worker_name }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
