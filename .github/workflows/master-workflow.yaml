@@ -120,15 +120,15 @@ jobs:
 
       - name: Terraform Vote Name
         id: vote_name
-        run: echo "VOTE_REPO=$(terraform output -raw vote_name)" >> $GITHUB_OUTPUT
+        run: echo "VOTE_REPO=$(terraform output -raw vote_name)" >> "$GITHUB_OUTPUT"
 
       - name: Terraform Result Name
         id: result_name
-        run: echo "RESULT_REPO=$(terraform output -raw result_name)" >> $GITHUB_OUTPUT
+        run: echo "RESULT_REPO=$(terraform output -raw result_name)" >> "$GITHUB_OUTPUT"
 
       - name: Terraform Worker Name
         id: worker_name
-        run: echo "WORKER_REPO=$(terraform output -raw worker_name)" >> $GITHUB_OUTPUT
+        run: echo "WORKER_REPO=$(terraform output -raw worker_name)" >> "$GITHUB_OUTPUT"
 
   ResultsBuildAndPublish:
 
