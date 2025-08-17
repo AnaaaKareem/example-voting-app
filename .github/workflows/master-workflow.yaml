@@ -86,8 +86,8 @@ jobs:
       - uses: actions/checkout@v5
         with:
           repository: anaaakareem/vote-iac
-          token: ${{ secrets.terraform_token }}
-          path: /vote-iac
+          token: ${{ secrets.TERRAFORM_REPO_TOKEN }}
+          path: vote-iac
       
       - uses: hashicorp/setup-terraform@v3
         with:
