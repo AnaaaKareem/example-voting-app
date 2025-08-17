@@ -103,6 +103,10 @@ jobs:
         continue-on-error: true
 
       - name: Terraform Init
+        env:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
         id: init
         run: terraform init -input=false
 
