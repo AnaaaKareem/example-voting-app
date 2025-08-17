@@ -133,7 +133,7 @@ jobs:
   ResultsBuildAndPublish:
 
     runs-on: ubuntu-latest
-    needs: ConatinerRegistry
+    needs: ContainerRegistry
     
     defaults:
      run:
@@ -166,7 +166,7 @@ jobs:
   VoteBuildAndPublish:
 
     runs-on: ubuntu-latest
-    needs: ConatinerRegistry
+    needs: ContainerRegistry
     
     defaults:
      run:
@@ -199,7 +199,7 @@ jobs:
   WorkerBuildAndPublish:
 
     runs-on: ubuntu-latest
-    needs: ConatinerRegistry
+    needs: ContainerRegistry
     
     defaults:
      run:
