@@ -51,38 +51,6 @@ jobs:
           npm cache clean --force
       - name: Remove Dependencies to build image
         run: rm -rf node_modules
-  
-  ResultsBuildAndPublish:
-
-    runs-on: ubuntu-latest
-    
-    defaults:
-     run:
-      working-directory: result
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.region }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build, tag, and push docker image to Amazon ECR
-        id: build-image
-        env:
-          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY: votingapp/results
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
-          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
   VoteTest:
 
@@ -109,6 +77,88 @@ jobs:
       - name: Uninstall Libraries
         run: pip uninstall -y -r requirements.txt
   
+  
+  ConatinerRegistry:
+    
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@5
+        with:
+          repository: anaaakareem/vote-iac
+          token: ${{ secrets.terraform_token }}
+          path: /
+      
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.1.7"
+
+      - name: Terraform fmt
+        id: fmt
+        run: terraform fmt -check
+        continue-on-error: true
+
+      - name: Terraform Init
+        id: init
+        run: terraform init -input=false
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color -input=false
+        continue-on-error: true
+
+      - name: Terraform Apply
+        id: Apply
+        run: terraform apply -auto-approve -no-color
+
+      - name: Terraform Vote URL
+        id: vote_url
+        run: echo "VOTE_REPO=$(terraform output -raw vote_url") >> $GITHUB_ENV
+
+      - name: Terraform Result URL
+        id: result_url
+        run: echo "RESULT_REPO=$(terraform output -raw result_url") >> $GITHUB_ENV
+
+      - name: Terraform Worker URL
+        id: worker_url
+        run: echo "WORKER_REPO=$(terraform output -raw worker_url") >> $GITHUB_ENV
+
+  ResultsBuildAndPublish:
+
+    runs-on: ubuntu-latest
+    
+    defaults:
+     run:
+      working-directory: result
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.region }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push docker image to Amazon ECR
+        id: build-image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: ${{ env.RESULT_REPO }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+
   VoteBuildAndPublish:
 
     runs-on: ubuntu-latest
@@ -135,7 +185,7 @@ jobs:
         id: build-image
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY: votingapp/vote
+          REPOSITORY: ${{ env.VOTE_REPO }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
@@ -167,7 +217,7 @@ jobs:
         id: build-image
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY: votingapp/worker
+          REPOSITORY: ${{ env.WORKER_REPO }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
