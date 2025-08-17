@@ -115,16 +115,16 @@ jobs:
         run: terraform apply -auto-approve -no-color
 
       - name: Terraform Vote URL
-        id: vote_url
-        run: echo "VOTE_REPO=$(terraform output -raw vote_url)" >> $GITHUB_ENV
+        id: vote_name
+        run: echo "VOTE_REPO=$(terraform output -raw vote_name)" >> $GITHUB_ENV
 
       - name: Terraform Result URL
-        id: result_url
-        run: echo "RESULT_REPO=$(terraform output -raw result_url)" >> $GITHUB_ENV
+        id: result_name
+        run: echo "RESULT_REPO=$(terraform output -raw result_name)" >> $GITHUB_ENV
 
       - name: Terraform Worker URL
-        id: worker_url
-        run: echo "WORKER_REPO=$(terraform output -raw worker_url)" >> $GITHUB_ENV
+        id: worker_name
+        run: echo "WORKER_REPO=$(terraform output -raw worker_name)" >> $GITHUB_ENV
 
   ResultsBuildAndPublish:
 
@@ -156,8 +156,8 @@ jobs:
           REPOSITORY: ${{ env.RESULT_REPO }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t ${{ env.RESULT_REPO }}:$IMAGE_TAG .
-          docker push ${{ env.RESULT_REPO }}ITORY:$IMAGE_TAG
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
   VoteBuildAndPublish:
 
@@ -189,8 +189,8 @@ jobs:
           REPOSITORY: ${{ env.VOTE_REPO }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t ${{ env.VOTE_REPO }}:$IMAGE_TAG .
-          docker push ${{ env.VOTE_REPO }}:$IMAGE_TAG
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
   WorkerBuildAndPublish:
 
@@ -222,5 +222,5 @@ jobs:
           REPOSITORY: ${{ env.WORKER_REPO }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t ${{ env.WORKER_REPO }}:$IMAGE_TAG .
-          docker push ${{ env.WORKER_REPO }}:$IMAGE_TAG
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
