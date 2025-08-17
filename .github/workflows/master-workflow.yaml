@@ -161,8 +161,8 @@ jobs:
           REPOSITORY: ${{ env.RESULT_REPO }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
-          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          docker build -t ${{ env.RESULT_REPO }}:$IMAGE_TAG .
+          docker push ${{ env.RESULT_REPO }}ITORY:$IMAGE_TAG
 
   VoteBuildAndPublish:
 
@@ -194,8 +194,8 @@ jobs:
           REPOSITORY: ${{ env.VOTE_REPO }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
-          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          docker build -t ${{ env.VOTE_REPO }}:$IMAGE_TAG .
+          docker push ${{ env.VOTE_REPO }}:$IMAGE_TAG
 
   WorkerBuildAndPublish:
 
@@ -227,5 +227,5 @@ jobs:
           REPOSITORY: ${{ env.WORKER_REPO }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
-          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          docker build -t ${{ env.WORKER_REPO }}:$IMAGE_TAG .
+          docker push ${{ env.WORKER_REPO }}:$IMAGE_TAG
