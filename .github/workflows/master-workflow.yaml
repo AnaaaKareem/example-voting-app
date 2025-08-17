@@ -120,7 +120,7 @@ jobs:
 
       - name: Terraform Result URL
         id: result_url
-        run: echo "RESULT_REPO=$(terraform output -raw result_url) >> $GITHUB_ENV
+        run: echo "RESULT_REPO=$(terraform output -raw result_url)" >> $GITHUB_ENV
 
       - name: Terraform Worker URL
         id: worker_url
