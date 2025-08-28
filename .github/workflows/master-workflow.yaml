@@ -1,17 +1,7 @@
 name: Build Images
 
 on:
-  # we want pull requests so we can build(test) but not push to image registry
   push:
-    branches:
-      - 'main'
-    paths:
-      - 'result/**'
-      - 'vote/**'
-      - 'worker/**'
-      - '.github/workflows/master-workflow.yaml'
-
-  pull_request:
     branches:
       - 'main'
     paths:
@@ -78,14 +68,23 @@ jobs:
         run: pip uninstall -y -r requirements.txt
   
   
-  ContainerRegistry:
+  BuildInfrastructure:
     
     runs-on: ubuntu-latest
     needs: [ ResultTest, VoteTest ]
     outputs:
+      cluster_name: ${{ steps.cluster_name.outputs.cluster_name }}
+      db_hostname: ${{ steps.db_hostname.outputs.db_hostname }}
+      db_username: ${{ steps.db_username.outputs.db_username }}
+      db_password: ${{ steps.db_password.outputs.db_password }}
+      redis_host: ${{ steps.redis_host.outputs.redis_host }}
+      redis_port: ${{ steps.redis_port.outputs.redis_port }}
       vote_name: ${{ steps.vote_name.outputs.vote_name }}
       result_name: ${{ steps.result_name.outputs.result_name }}
       worker_name: ${{ steps.worker_name.outputs.worker_name }}
+
+    
+
     env:
       TF_VAR_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
       TF_VAR_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -130,10 +129,36 @@ jobs:
         id: worker_name
         run: echo "worker_name=$(terraform output -raw worker_name)" >> $GITHUB_OUTPUT
 
+      - name: Terraform Cluster Name
+        id: cluster_name
+        run: echo "cluster_name=$(terraform output -raw cluster_name)" >> $GITHUB_OUTPUT
+
+      - name: Terraform DB Hostname
+        id: db_hostname
+        run: echo "db_hostname=$(terraform output -raw rds_endpoint)" >> $GITHUB_OUTPUT
+
+      - name: Terraform DB Username
+        id: db_username
+        run: echo "db_username=$(terraform output -raw rds_username)" >> $GITHUB_OUTPUT
+
+      - name: Terraform DB Password
+        id: db_password
+        run: echo "db_password=$(terraform output -raw rds_password)" >> $GITHUB_OUTPUT
+
+      - name: Terraform Redis Host
+        id: redis_host
+        run: echo "redis_host=$(terraform output -raw ec_endpoint)" >> $GITHUB_OUTPUT
+
+      - name: Terraform Redis Port
+        id: redis_port
+        run: echo "redis_port=$(terraform output -raw redis_port)" >> $GITHUB_OUTPUT
+
   ResultsBuildAndPublish:
 
     runs-on: ubuntu-latest
-    needs: ContainerRegistry
+    needs: BuildInfrastructure
+    outputs:
+      result_image: ${{ steps.build-image.outputs.result_image }}
     
     defaults:
      run:
@@ -157,16 +182,19 @@ jobs:
         id: build-image
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY: ${{ needs.ContainerRegistry.outputs.result_name }}
+          REPOSITORY: ${{ needs.BuildInfrastructure.outputs.result_name }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          echo "result_image=$REGISTRY/$REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
   VoteBuildAndPublish:
 
     runs-on: ubuntu-latest
-    needs: ContainerRegistry
+    needs: BuildInfrastructure
+    outputs:
+      vote_image: ${{ steps.build-image.outputs.vote_image }}
     
     defaults:
      run:
@@ -190,16 +218,19 @@ jobs:
         id: build-image
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY: ${{ needs.ContainerRegistry.outputs.vote_name }}
+          REPOSITORY: ${{ needs.BuildInfrastructure.outputs.vote_name }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          echo "vote_image=$REGISTRY/$REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
   WorkerBuildAndPublish:
 
     runs-on: ubuntu-latest
-    needs: ContainerRegistry
+    needs: BuildInfrastructure
+    outputs:
+      worker_image: ${{ steps.build-image.outputs.worker_image }}
     
     defaults:
      run:
@@ -223,8 +254,101 @@ jobs:
         id: build-image
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY: ${{ needs.ContainerRegistry.outputs.worker_name }}
+          REPOSITORY: ${{ needs.BuildInfrastructure.outputs.worker_name }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          echo "worker_image=$REGISTRY/$REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+  CreateCluster:
+    runs-on: ubuntu-latest
+    needs: [ VoteBuildAndPublish, ResultsBuildAndPublish, WorkerBuildAndPublish ]
+
+    defaults:
+      run:
+        working-directory: k8s-specifications
+      
+    steps:
+
+      - uses: actions/checkout@v5
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.region }}
+          aws-account-id: ${{ secrets.ACCOUNT_ID }}
+
+      - name: Update kube config
+        run: aws eks update-kubeconfig --name ${{ needs.BuildInfrastructure.outputs.cluster_name }} --region ${{ vars.region }}
+
+      - name: Inject DB Secret
+        run: |
+          kubectl create secret generic db-credentials \
+            --from-literal=username=${{ needs.BuildInfrastructure.outputs.db_username }} \
+            --from-literal=password=${{ needs.BuildInfrastructure.outputs.db_password }}
+
+
+      - name: Inject Image Registery Secret
+        run: |
+          kubectl create secret docker-registry ecr-secret \
+            --docker-server=${{ secrets.ACCOUNT_ID }}.dkr.ecr.${{ vars.region }}.amazonaws.com \
+            --docker-username=AWS \
+            --docker-password=$(aws ecr get-login-password --region ${{ vars.region }}) \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create ConfigMap
+        run: |
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: app-config
+          data:
+            CLUSTER_NAME: "${{ needs.BuildInfrastructure.outputs.cluster_name }}"
+            REDIS_PORT: "${{ needs.BuildInfrastructure.outputs.redis_port }}"
+          EOF
+
+      - name: Create Secret
+        run: |
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: app-secrets
+          type: Opaque
+          stringData:
+            DB_HOST: "${{ needs.BuildInfrastructure.outputs.db_hostname }}"
+            DB_USER: "${{ needs.BuildInfrastructure.outputs.db_username }}"
+            DB_PASS: "${{ needs.BuildInfrastructure.outputs.db_password }}"
+            REDIS_HOST: "${{ needs.BuildInfrastructure.outputs.redis_host }}"
+          EOF
+
+      - name: Deploy Result
+        env:
+          RESULT: ${{ needs.ResultsBuildAndPublish.outputs.result_image }}
+        run: |
+          echo "Using IMAGE=$RESULT"
+          envsubst < result-deployment.yaml | kubectl apply -f -
+          kubectl apply -f result-service.yaml
+        continue-on-error: false
+
+      - name: Deploy Vote
+        env:
+          VOTE: ${{ needs.VotesBuildAndPublish.outputs.vote_image }}
+        run: |
+          echo "Using IMAGE=$VOTE"
+          envsubst < vote-deployment.yaml | kubectl apply -f -
+          kubectl apply -f vote-service.yaml
+        continue-on-error: false
+
+      - name: Deploy Worker
+        env:
+          WORKER: ${{ needs.WorkerBuildAndPublish.outputs.worker_image }}
+        run: |
+          echo "Using IMAGE=$WORKER"
+          envsubst < worker-deployment.yaml | kubectl apply -f -
+          kubectl apply -f worker-service.yaml
+        continue-on-error: false
